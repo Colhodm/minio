@@ -1,3 +1,4 @@
+
 /*
  * Minio Cloud Storage, (C) 2015-2018 Minio, Inc.
  *
@@ -30,11 +31,13 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	miniogo "github.com/minio/minio-go"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/dns"
+	"github.com/minio/minio/pkg/csvsql"
 	"github.com/minio/minio/pkg/event"
 	"github.com/minio/minio/pkg/hash"
 	"github.com/minio/minio/pkg/ioutil"
@@ -59,6 +62,132 @@ func setHeadGetRespHeaders(w http.ResponseWriter, reqParams url.Values) {
 		if header, ok := supportedHeadGetReqParams[k]; ok {
 			w.Header()[header] = v
 		}
+	}
+}
+
+// SelectObjectContentHandler - GET Object?select
+// ----------
+// This implementation of the GET operation retrieves object content based
+// on an SQL expression. In the request, along with the sql expression, you must
+// also specify a data serialization format (JSON, CSV) of the object.
+func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := newContext(r, "SelectObject")
+
+	var object, bucket string
+	vars := mux.Vars(r)
+	bucket = vars["bucket"]
+	object = vars["object"]
+
+	// Fetch object stat info.
+	objectAPI := api.ObjectAPI()
+	if objectAPI == nil {
+		writeErrorResponse(w, ErrServerNotInitialized, r.URL)
+		return
+	}
+
+	getObjectInfo := objectAPI.GetObjectInfo
+	if api.CacheAPI() != nil {
+		getObjectInfo = api.CacheAPI().GetObjectInfo
+	}
+
+	if s3Error := checkRequestAuthType(ctx, r, policy.GetObjectAction, bucket, object); s3Error != ErrNone {
+		if getRequestAuthType(r) == authTypeAnonymous {
+			// As per "Permission" section in https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html
+			// If the object you request does not exist, the error Amazon S3 returns depends on whether you also have the s3:ListBucket permission.
+			// * If you have the s3:ListBucket permission on the bucket, Amazon S3 will return an HTTP status code 404 ("no such key") error.
+			// * if you don’t have the s3:ListBucket permission, Amazon S3 will return an HTTP status code 403 ("access denied") error.`
+			if globalPolicySys.IsAllowed(policy.Args{
+				Action:          policy.ListBucketAction,
+				BucketName:      bucket,
+				ConditionValues: getConditionValues(r, ""),
+				IsOwner:         false,
+			}) {
+				_, err := getObjectInfo(ctx, bucket, object)
+				if toAPIErrorCode(err) == ErrNoSuchKey {
+					s3Error = ErrNoSuchKey
+				}
+			}
+		}
+		writeErrorResponse(w, s3Error, r.URL)
+		return
+	}
+	if r.ContentLength <= 0 {
+		writeErrorResponse(w, ErrEmptyRequestBody, r.URL)
+		return
+	}
+
+	var selectReq ObjectSelectRequest
+	if err := xmlDecoder(r.Body, &selectReq, r.ContentLength); err != nil {
+		writeErrorResponse(w, ErrMalformedXML, r.URL)
+		return
+	}
+
+	objInfo, err := getObjectInfo(ctx, bucket, object)
+	if err != nil {
+		writeErrorResponse(w, toAPIErrorCode(err), r.URL)
+		return
+	}
+
+	// Get request range.
+	rangeHeader := r.Header.Get("Range")
+	if rangeHeader != "" {
+		writeErrorResponse(w, ErrUnsupportedFunction, r.URL)
+		return
+	}
+
+	if hasSSECustomerHeader(r.Header) {
+		writeErrorResponse(w, ErrUnsupportedEncryptionMode, r.URL)
+		return
+	}
+
+	if selectReq.InputSerialization.CompressionType == SelectCompressionGZIP {
+		if !strings.Contains(objInfo.ContentType, "gzip") {
+			writeErrorResponse(w, ErrUnsupportedObjectType, r.URL)
+			return
+		}
+	}
+	if selectReq.InputSerialization.CompressionType == SelectCompressionNONE || selectReq.InputSerialization.CompressionType == "" {
+		if !strings.Contains(objInfo.ContentType, "text/csv") {
+			writeErrorResponse(w, ErrUnsupportedObjectType, r.URL)
+			return
+		}
+	}
+
+	if !strings.EqualFold(string(selectReq.ExpressionType), "SQL") {
+		writeErrorResponse(w, ErrInvalidExpressionType, r.URL)
+		return
+	}
+	getObject := objectAPI.GetObject
+	if api.CacheAPI() != nil && !hasSSECustomerHeader(r.Header) {
+		getObject = api.CacheAPI().GetObject
+	}
+
+	reader, writer := io.Pipe()
+	go func() {
+		if gerr := getObject(ctx, bucket, object, 0, objInfo.Size, writer, objInfo.ETag); gerr != nil {
+			writer.CloseWithError(gerr)
+			return
+		}
+		writer.Close() // Close writer explicitly signalling we wrote all data.
+	}()
+	//s3select //Options
+	if selectReq.InputSerialization.CSV != nil {
+		options := &csvsql.Options{
+			HasHeader:      true,
+			FieldDelimiter: selectReq.InputSerialization.CSV.FieldDelimiter,
+			Comments:       selectReq.InputSerialization.CSV.Comments,
+			Name:           "S3Object", 	 // Default table name for all objects
+			ReadFrom:       reader,
+			CompressedGzip: selectReq.InputSerialization.CompressionType == SelectCompressionGZIP,
+			Expression:     selectReq.Expression,
+			OutputFieldDelimiter: selectReq.OutputSerialization.CSV.FieldDelimiter,
+		}
+		s3s, err := csvsql.NewInput(options)
+		if err != nil {
+			writeErrorResponse(w, ErrInternalError, r.URL)
+			return
+		}
+		s3s.Execute(w, reader)
 	}
 }
 

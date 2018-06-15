@@ -18,8 +18,8 @@ package cmd
 
 import (
 	"net/http"
-
-	"github.com/gorilla/mux"
+  // "fmt"
+	router "github.com/gorilla/mux"
 	"github.com/minio/minio/cmd/logger"
 )
 
@@ -30,7 +30,7 @@ type objectAPIHandlers struct {
 }
 
 // registerAPIRouter - registers S3 compatible APIs.
-func registerAPIRouter(router *mux.Router) {
+func registerAPIRouter(mux *router.Router) {
 	var err error
 	var cacheConfig = globalServerConfig.GetCacheConfig()
 	if len(cacheConfig.Drives) > 0 {
@@ -46,8 +46,8 @@ func registerAPIRouter(router *mux.Router) {
 	}
 
 	// API Router
-	apiRouter := router.PathPrefix("/").Subrouter()
-	var routers []*mux.Router
+	apiRouter := mux.NewRoute().PathPrefix("/").Subrouter()
+	var routers []*router.Router
 	if globalDomainName != "" {
 		routers = append(routers, apiRouter.Host("{bucket:.+}."+globalDomainName).Subrouter())
 	}
@@ -63,14 +63,16 @@ func registerAPIRouter(router *mux.Router) {
 		bucket.Methods("PUT").Path("/{object:.+}").HandlerFunc(httpTraceHdrs(api.PutObjectPartHandler)).Queries("partNumber", "{partNumber:[0-9]+}", "uploadId", "{uploadId:.*}")
 		// ListObjectPxarts
 		bucket.Methods("GET").Path("/{object:.+}").HandlerFunc(httpTraceAll(api.ListObjectPartsHandler)).Queries("uploadId", "{uploadId:.*}")
+
 		// CompleteMultipartUpload
 		bucket.Methods("POST").Path("/{object:.+}").HandlerFunc(httpTraceAll(api.CompleteMultipartUploadHandler)).Queries("uploadId", "{uploadId:.*}")
 		// NewMultipartUpload
 		bucket.Methods("POST").Path("/{object:.+}").HandlerFunc(httpTraceAll(api.NewMultipartUploadHandler)).Queries("uploads", "")
+
 		// AbortMultipartUpload
 		bucket.Methods("DELETE").Path("/{object:.+}").HandlerFunc(httpTraceAll(api.AbortMultipartUploadHandler)).Queries("uploadId", "{uploadId:.*}")
-		// GetObjectACL - this is a dummy call.
-		bucket.Methods("GET").Path("/{object:.+}").HandlerFunc(httpTraceHdrs(api.GetObjectACLHandler)).Queries("acl", "")
+		// SelectObjectContent
+		bucket.Methods("POST").Path("/{object:.+}").HandlerFunc(httpTraceHdrs(api.SelectObjectContentHandler)).Queries("select", "").Queries("select-type", "2")
 		// GetObject
 		bucket.Methods("GET").Path("/{object:.+}").HandlerFunc(httpTraceHdrs(api.GetObjectHandler))
 		// CopyObject
@@ -85,10 +87,6 @@ func registerAPIRouter(router *mux.Router) {
 		bucket.Methods("GET").HandlerFunc(httpTraceAll(api.GetBucketLocationHandler)).Queries("location", "")
 		// GetBucketPolicy
 		bucket.Methods("GET").HandlerFunc(httpTraceAll(api.GetBucketPolicyHandler)).Queries("policy", "")
-
-		// GetBucketACL -- this is a dummy call.
-		bucket.Methods("GET").HandlerFunc(httpTraceAll(api.GetBucketACLHandler)).Queries("acl", "")
-
 		// GetBucketNotification
 		bucket.Methods("GET").HandlerFunc(httpTraceAll(api.GetBucketNotificationHandler)).Queries("notification", "")
 		// ListenBucketNotification
@@ -122,6 +120,6 @@ func registerAPIRouter(router *mux.Router) {
 	// ListBuckets
 	apiRouter.Methods("GET").Path("/").HandlerFunc(httpTraceAll(api.ListBucketsHandler))
 
-	// If none of the routes match.
+
 	apiRouter.NotFoundHandler = http.HandlerFunc(httpTraceAll(notFoundHandler))
 }

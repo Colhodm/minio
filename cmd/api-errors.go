@@ -187,12 +187,56 @@ const (
 	ErrAdminCredentialsMismatch
 	ErrInsecureClientRequest
 	ErrObjectTampered
+
 	ErrHealNotImplemented
 	ErrHealNoSuchProcess
 	ErrHealInvalidClientToken
 	ErrHealMissingBucket
 	ErrHealAlreadyRunning
 	ErrHealOverlappingPaths
+
+	// S3 select API errors
+	ErrUnsupportedObjectType
+	ErrInvalidExpressionType
+	ErrInvalidFileHeaderInfo
+	ErrInvalidJSONType
+	ErrInvalidQuoteFields
+	ErrInvalidDataFormat
+	ErrInvalidTextEncoding
+
+	ErrUnsupportedEncryptionMode
+	ErrEmptyRequestBody
+	ErrExpressionTooLong
+	ErrObjectSerializationConflict
+	ErrLexerInvalidChar
+	ErrLexerInvalidOperator
+	ErrLexerInvalidLiteral
+	ErrParseExpectedKeyword
+	ErrParseExpectedTokenType
+	ErrParseExpected2TokenTypes
+	ErrParseExpectedExpression
+	ErrParseExpectedNumber
+	ErrParseExpectedTypeName
+	ErrParseExpectedWhenClause
+	ErrParseUnsupportedToken
+	ErrParseUnsupportedLiteralsGroupBy
+	ErrParseExpectedMember
+	ErrParseUnsupportedSelect
+	ErrParseUnsupportedCase
+	ErrParseUnsupportedCaseClause
+	ErrParseUnsupportedAlias
+	ErrParseUnsupportedSyntax
+	ErrParseUnknownOperator
+	ErrUnsupportedFunction
+	ErrUnsupportedSQLOperation
+	ErrUnsupportedSQLStructure
+	ErrUnsupportedSyntax
+	ErrOverMaxNumberOfColumn
+	ErrOverMaxRecordSize
+	ErrIllegalSQLFunctionArgument
+	ErrMultipleDataSourcesUnsupported
+	ErrParseMalformedJoin
+	ErrParseEmptySelect
 )
 
 // error code to APIError structure, these fields carry respective
@@ -799,6 +843,7 @@ var errorCodeResponse = map[APIErrorCode]APIError{
 		Description:    "X-Amz-Expires must be less than a week (in seconds); that is, the given X-Amz-Expires must be less than 604800 seconds",
 		HTTPStatusCode: http.StatusBadRequest,
 	},
+
 	// Generic Invalid-Request error. Should be used for response errors only for unlikely
 	// corner case errors for which introducing new APIErrorCode is not worth it. LogIf()
 	// should be used to log the error at the source of the error for debugging purposes.
@@ -841,6 +886,169 @@ var errorCodeResponse = map[APIErrorCode]APIError{
 		Code:           "XMinioBackendDown",
 		Description:    "Object storage backend is unreachable",
 		HTTPStatusCode: http.StatusServiceUnavailable,
+	},
+
+	// S3 select API errors - TODO fix the errors.
+	ErrUnsupportedObjectType: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidExpressionType: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidFileHeaderInfo: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidJSONType: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidQuoteFields: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidDataFormat: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidTextEncoding: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+
+	ErrUnsupportedEncryptionMode: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrEmptyRequestBody: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrExpressionTooLong: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrObjectSerializationConflict: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrLexerInvalidChar: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrLexerInvalidOperator: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrLexerInvalidLiteral: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedKeyword: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedTokenType: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpected2TokenTypes: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedExpression: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedNumber: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedTypeName: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedWhenClause: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedToken: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedLiteralsGroupBy: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseExpectedMember: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedSelect: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedCase: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedCaseClause: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedAlias: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnsupportedSyntax: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseUnknownOperator: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrUnsupportedFunction: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrUnsupportedSQLOperation: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrUnsupportedSQLStructure: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrUnsupportedSyntax: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrOverMaxNumberOfColumn: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrOverMaxRecordSize: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrIllegalSQLFunctionArgument: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrMultipleDataSourcesUnsupported: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseMalformedJoin: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrParseEmptySelect: {
+		Code:           "InvalidRequest",
+		HTTPStatusCode: http.StatusBadRequest,
 	},
 
 	// Add your error structure here.

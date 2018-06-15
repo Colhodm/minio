@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
+  "fmt"
 	"github.com/minio/minio/cmd/logger"
 	httptracer "github.com/minio/minio/pkg/handlers"
 )
@@ -300,6 +300,9 @@ func getResource(path string, host string, domain string) (string, error) {
 
 // If none of the http routes match respond with MethodNotAllowed
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	// If none of the routes match.
+	//fmt.Printf("%#v\n",smallerexpr)
+	fmt.Println("ERROR NOT FOUND")
 	writeErrorResponse(w, ErrMethodNotAllowed, r.URL)
 	return
 }
