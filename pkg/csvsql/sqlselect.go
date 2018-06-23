@@ -369,7 +369,6 @@ func (reader *Input) processSqlRequest(requestedColumnNames []string, alias stri
 									//log.Fatal("column not located in csv")
 									myRowError <- INVALIDCOLLABEL
 									return
-									//return nil, INVALIDCOLLABEL
 								}
 								myrow = record[mytempindex]
 							} else {
@@ -377,7 +376,6 @@ func (reader *Input) processSqlRequest(requestedColumnNames []string, alias stri
 									mytempindex, notfound := columnsMap[trimQuotes(requestedColumnNames[i])]
 									if !notfound {
 										//log.Fatal("column not located in csv")
-										//return nil, INVALIDCOLLABEL
 										myRowError <- INVALIDCOLLABEL
 										return
 									}
